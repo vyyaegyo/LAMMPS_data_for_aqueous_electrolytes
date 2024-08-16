@@ -1,6 +1,4 @@
 ## **Computational Analysis of the Physical Properties of Water-in-Salt Electrolytes**
-### Abstract
-# README
 
 ## Overview
 
