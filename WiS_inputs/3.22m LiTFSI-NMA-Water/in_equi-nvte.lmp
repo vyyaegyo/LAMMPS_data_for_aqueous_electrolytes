@@ -1,0 +1,53 @@
+# created by fftool
+
+units real
+boundary p p p
+
+atom_style full
+bond_style harmonic
+angle_style harmonic
+dihedral_style opls
+
+special_bonds lj/coul 0.0 0.0 0.5
+
+# remove hybrid if not necessary
+pair_style hybrid lj/cut/coul/long 12.0 12.0
+pair_modify tail yes
+kspace_style pppm 1.0e-5
+
+read_data data.npt.lmp
+
+include pair.lmp
+
+#minimize 1.0e-4 1.0e-6 100 1000
+
+fix SHAKE all shake 0.0001 20 0 b 5 6 7 8 9 10 11 16 a 26
+
+neighbor 2.0 bin
+neigh_modify delay 0 every 1 check yes
+
+timestep 0.5
+thermo   5000
+
+thermo_style custom step cpu etotal ke pe evdwl ecoul elong temp press vol density lx
+thermo_modify lost ignore
+#thermo_modify line multi
+
+dump d1 all custom 1000 system.deform.lammpstrj id type xu yu zu
+fix f1 all nvt temp 300.0 300.0 100.0
+fix f2 all deform 1 x final 0.0 42.00422 y final 0.0 42.00422 z final 0.0 42.00422 units box
+run 1000000
+unfix f2
+unfix f1
+undump d1
+write_data system.deform.data 
+
+dump d1 all custom 1000 system.nvte.lammpstrj id type xu yu zu
+dump_modify d1 element C N C C O H H H H H H H Li C F S N O H O
+fix f1 all nvt temp 300.0 300.0 100.0
+restart         20000000 data.nvte.*.restart
+run             60000000
+unfix           f1
+undump          d1
+
+write_data data.nvte_1.lmp

@@ -1,0 +1,79 @@
+units real
+boundary p p p
+
+atom_style full
+bond_style harmonic
+angle_style harmonic
+dihedral_style opls
+special_bonds lj/coul 0.0 0.0 0.5
+
+pair_style hybrid/overlay  lj/cut/coul/long  12.0  coul/long/cs 12 thole 2.600 12.0 coul/tt 4 12.0
+#pair_style hybrid/overlay  lj/cut/coul/long  12.0 thole 2.600 12.0
+#pair_style lj/cut/coul/long 12.0 12.0
+pair_modify tail yes
+kspace_style pppm 1.0e-5
+
+
+#read_data data.02.npt_333K.lmp   extra/special/per/atom 8
+read_restart  restart_npt1000000333K
+
+include pair-drude.lmp
+include pair.lmp
+include pair-tt.lmp
+
+
+group WATERS type 1 2 3
+group ATOMS type 4 5 6 7 8 9 10
+group MIXAW   type 1 2 3 4 5 6 7 8 9 10
+group CORES type 1 4 5 6 7 8 9 10
+group DRUDES type 11 12 13 14 15 16 17 18
+
+
+fix DRUDE all drude C N N C C C C C C C D D D D D D D D
+
+neighbor 2.0 bin
+timestep 1
+
+variable TK equal 333.0
+variable TDK equal 1.0
+variable PBAR equal 1.0
+
+comm_modify vel yes
+
+velocity MIXAW create ${TK} 12345
+velocity DRUDES create ${TDK} 12345
+
+delete_bonds WATERS multi
+
+#compute TMIXAW  MIXAW  temp
+#fix DIRECT all drude/transform/direct
+#fix NVT1 WATERS rigid/nvt/small molecule temp ${TK} ${TK}  10
+#fix NPT ATOMS npt temp ${TK} ${TK}  100 iso 1 1 100
+#fix_modify NPT temp TMIXAW  press thermo_press
+#fix NVT2 DRUDES nvt temp  ${TDK}  ${TDK}  20
+#fix INVERSE all drude/transform/inverse
+
+
+compute TMIXAW  MIXAW  temp
+fix DIRECT all drude/transform/direct
+fix NVT1 WATERS rigid/nvt/small molecule temp ${TK} ${TK}  50
+fix NVT2 ATOMS nvt temp ${TK} ${TK}  50
+fix NVT3 DRUDES nvt temp  ${TDK}  ${TDK}  20
+fix INVERSE all drude/transform/inverse
+
+
+fix MOMENTUM all momentum 100 linear 1 1 1
+
+
+thermo_style custom step cpu etotal ke pe ebond eangle evdwl ecoul elong press density  vol temp c_TMIXAW[1] c_TMIXAW[2]
+thermo 100
+
+
+dump TRAJ all custom 10000 dump.01_nvt_333K.lammpstrj id mol type element q xu yu zu
+dump_modify TRAJ element O H Mw C F S O N O Li  D D D D D D D D sort id
+
+restart 100000 restart_nvt*333K
+
+run 10000000
+
+write_data data.01.nvt_333K.lmp
